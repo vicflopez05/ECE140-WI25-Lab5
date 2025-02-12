@@ -113,19 +113,128 @@ async def get_table_data(table_name: str):
 @app.get("/assignment1")
 async def assignment1():
     # Basic JOIN query
-    return {"message": "Not implemented"}
+    try:
+        with get_db_connection() as connection:
+            if connection is None:
+                return {"error": "Could not connect to database"}
+
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(
+                """
+                SELECT
+                    customers.name,
+                    customers.email,
+                    orders.total_amount
+                FROM customers
+                INNER JOIN orders
+                ON customers.customer_id = orders.customer_id
+                ORDER BY orders.total_amount DESC
+                """
+            )
+
+            results = cursor.fetchall()
+            return {"data": results}
+
+    except Error as e:
+        return {"error": f"Database error: {str(e)}"}
 
 @app.get("/assignment2")
 async def assignment2():
     # GROUP BY query
-    return {"message": "Not implemented"}
+    try:
+        with get_db_connection() as connection:
+            if connection is None:
+                return {"error": "Could not connect to database"}
+
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(
+                """
+                SELECT
+                    products.category as category,
+                    COUNT(DISTINCT order_items.order_id) as total_orders,
+                    SUM(order_items.quantity * order_items.unit_price) as total_revenue,
+                    AVG(order_items.unit_price) as avg_order_value
+                FROM products
+                INNER JOIN order_items
+                ON products.product_id = order_items.product_id
+                GROUP BY products.category
+                ORDER BY total_revenue DESC
+                """
+            )
+
+            results = cursor.fetchall()
+            return {"data": results}
+
+    except Error as e:
+        return {"error": f"Database error: {str(e)}"}
 
 @app.get("/assignment3")
 async def assignment3():
     # Complex JOIN with GROUP BY
-    return {"message": "Not implemented"}
+    try:
+        with get_db_connection() as connection:
+            if connection is None:
+                return {"error": "Could not connect to database"}
+
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(
+                """
+                SELECT
+                    customers.membership_level,
+                    customers.city,
+                    COUNT(orders.customer_id) as total_orders,
+                    AVG(orders.total_amount) as avg_order_value,
+                    COUNT(DISTINCT orders.customer_id) as customer_count,
+                    COUNT(orders.customer_id)/COUNT(DISTINCT orders.customer_id) as orders_per_customer
+                FROM customers
+                INNER JOIN orders
+                ON customers.customer_id = orders.customer_id
+                GROUP BY customers.membership_level, customers.city
+                ORDER BY customers.membership_level
+                """
+            )
+
+            results = cursor.fetchall()
+            return {"data": results}
+
+    except Error as e:
+        return {"error": f"Database error: {str(e)}"}
 
 @app.get("/assignment4")
 async def assignment4():
     # Subquery
-    return {"message": "Not implemented"} 
+    try:
+        with get_db_connection() as connection:
+            if connection is None:
+                return {"error": "Could not connect to database"}
+
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(
+                """
+                SELECT
+                    name,
+                    category,
+                    total_sales,
+                    (total_sales / total_orders) as category_avg,
+                    (((total_sales - (total_sales / total_orders)) / (total_sales / total_orders)) * 100) as percent_above_avg
+                FROM (
+                    SELECT
+                        products.name as name,
+                        products.category as category,
+                        SUM(order_items.quantity * order_items.unit_price) as total_sales,
+                        COUNT(order_items.product_id) as total_orders
+                    FROM products
+                    INNER JOIN order_items
+                    ON products.product_id = order_items.product_id
+                    GROUP BY products.name, products.category
+                ) as a_4
+                WHERE total_orders > 1
+                ORDER BY percent_above_avg DESC
+                """
+            )
+
+            results = cursor.fetchall()
+            return {"data": results}
+
+    except Error as e:
+        return {"error": f"Database error: {str(e)}"}
